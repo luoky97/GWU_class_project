@@ -1,1 +1,1 @@
-# GWU_class_project
+# GWU_class_projects
