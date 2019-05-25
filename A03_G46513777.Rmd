@@ -1,0 +1,118 @@
+---
+title: "Assignment 3"
+author: "Kaiyuan Luo"
+date: "9/15/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+# part a
+```{r}
+# get the path of the current script
+mydf <- read_csv("~/Desktop/GWU/6211/week3/A03_G46513777/kicksfootball.csv")
+
+# convert the categorical variable goal to a binary variable gbin
+mydf$gbin <- ifelse(mydf$goal == "Y", 1, 0)
+gbin <- as.array(mydf$gbin)
+# get the total number of attempts
+attempts <- length(gbin)
+
+# count the total number of goals
+goal = 0
+for (i in 1:attempts) {
+  
+  if(gbin[i]==1) {
+    goal = goal + 1
+  }
+}
+
+# calculate the probability of scoring   
+pr_overall <- goal/attempts
+# print the response
+paste("Melvin had total of", attempts, 
+      "field attempts, and the probability of Melvin scoring is", 
+      round(pr_overall,4),".", sep = " ")
+
+```
+
+# part b
+```{r}
+# convert the categorical variable practiceormatch to a binary variable p_m
+mydf$p_m <- ifelse(mydf$practiceormatch == "P", 1, 0)
+# extract the dataframe of practice
+prac <- subset(mydf, p_m == 1)
+# fit a logistic regression model
+prac.log <- glm(gbin~yards, data=prac, family = binomial)
+# see the result
+summary(prac.log)
+
+## for the logit model, b0 = 4.50461 and b1 = -0.08581
+## Then, we could obtain the estimated probability when practice
+## P(y=1) = [e^(4.50461-0.08581x)]/[1+e^(4.50461-0.08581x)]
+
+# create a function to predict the result with specific values of yards in practice
+practice <- function(p) {
+  goal_pra <- predict(prac.log,data.frame(yards=p), type="resp")
+  paste("The probability of Melvin scoring a goal in practice when he kicks from", 
+        p, "yards is", round(goal_pra,4), sep = " ")
+}
+
+# print the result of yards = 20, 40, 60 respectively
+list(practice(20),practice(40),practice(60))
+
+# plot the logit model
+plot(gbin~yards,data=mydf, xlab="Yards", ylab="Goal or not", main="In Practice")
+curve(predict(prac.log,data.frame(yards=x), type="resp"), add=TRUE)
+
+
+
+```
+
+```{r}
+# extract the dataframe of match
+matc <- subset(mydf, p_m == 0)
+# fit a logistic regression model
+matc.log <- glm(gbin~yards, data=matc, family = binomial)
+# print the result
+summary(matc.log)
+
+## for the logit model, b0 = 4.72671 and b1 = -0.07136
+## Then, we could obtain the estimated probability when Melvin is playing in matches
+## P(y=1) = [e^(4.72671-0.07136x)]/[1+e^(4.72671-0.07136x)]
+
+# create a function to predict the result with specific values of yards in matches
+match <- function(m) {
+  goal_mat <- predict(matc.log,data.frame(yards=m), type="resp")
+  paste("The probability of Melvin scoring a goal in matches when he kicks from", 
+        m, "yards is", round(goal_mat,4), sep = " ")
+}
+
+# print the result of yards = 20, 40, 60 respectively
+list(match(20),match(40),match(60))
+
+# plot the logistic regression model
+plot(gbin~yards,data=mydf, xlab="Yards", ylab="Goal or not", main="In Matches")
+curve(predict(matc.log,data.frame(yards=x), type="resp"), add=TRUE)
+
+
+
+```
+
+# part c
+```{r}
+# load the ggplot2 package
+library(ggplot2)
+# use ggplot to first draw a scatterplot of mydf, distinguishing practice and match by colors
+# then, add the logistic regression curves of both practice and match in the ggplot
+g <- ggplot(mydf)+ geom_point(aes(x=yards, y=gbin, color=practiceormatch)) + 
+     geom_smooth(method="glm", aes(yards,gbin,color=practiceormatch), 
+                 method.args = list(family = "binomial"), se = FALSE, fullrange=TRUE)
+# label the x and y axises, add a title, and label the legend
+g <- g + xlab("Yards") + ylab("Goal or Not Goal") + ggtitle("Logistic Regression Model of Melvin's Performance") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +  guides(color=guide_legend(title="Practice or Matches"))
+# display the ggplot
+g
+```
